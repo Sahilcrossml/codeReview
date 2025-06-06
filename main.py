@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Interactive GitHub PR Reviewer
+Interactive GitHub PR Reviewer - FIXED VERSION
 Browse your repositories and select PRs to review
 """
 
@@ -34,7 +34,7 @@ class InteractivePRReviewer:
             "page": page,
             "per_page": per_page,
             "sort": "updated",
-            "type": "all"  # all, owner, member
+            "type": "all"
         }
         response = requests.get(url, headers=self.headers, params=params)
         response.raise_for_status()
@@ -44,7 +44,7 @@ class InteractivePRReviewer:
         """Get PRs for a specific repository"""
         url = f"{self.base_url}/repos/{owner}/{repo}/pulls"
         params = {
-            "state": state,  # open, closed, all
+            "state": state,
             "page": page,
             "per_page": per_page,
             "sort": "updated",
@@ -62,12 +62,10 @@ class InteractivePRReviewer:
         
         for i, repo in enumerate(repos, 1):
             try:
-                # Safely get repository data with defaults
                 name = repo.get('name', 'Unknown')
                 description = repo.get('description') or 'No description'
                 html_url = repo.get('html_url', 'No URL')
                 
-                # Handle dates safely
                 updated_at = repo.get('updated_at')
                 if updated_at:
                     try:
@@ -78,11 +76,9 @@ class InteractivePRReviewer:
                 else:
                     updated_str = 'Unknown'
                 
-                # Repository info with safe access
                 private_marker = "🔒" if repo.get('private', False) else "🌐"
                 fork_marker = "🍴" if repo.get('fork', False) else ""
                 
-                # Safe access to numeric fields
                 stars = repo.get('stargazers_count', 0)
                 forks = repo.get('forks_count', 0)
                 issues = repo.get('open_issues_count', 0)
@@ -96,7 +92,6 @@ class InteractivePRReviewer:
                 
             except Exception as e:
                 print(f"{i:2d}. ❌ Error displaying repository: {e}")
-                print(f"    Raw data: {repo}")
                 print()
 
     def display_pull_requests(self, prs, owner, repo):
@@ -110,26 +105,115 @@ class InteractivePRReviewer:
             return
         
         for i, pr in enumerate(prs, 1):
-            # Format dates
-            created = datetime.fromisoformat(pr['created_at'].replace('Z', '+00:00'))
-            updated = datetime.fromisoformat(pr['updated_at'].replace('Z', '+00:00'))
-            created_str = created.strftime('%Y-%m-%d')
-            updated_str = updated.strftime('%Y-%m-%d')
-            
-            # PR status
-            status_icon = "🟢" if pr['state'] == 'open' else "🔴"
-            draft_marker = "📝" if pr.get('draft', False) else ""
-            
-            print(f"{i:2d}. {status_icon} #{pr['number']} {draft_marker}")
-            print(f"    📋 {pr['title']}")
-            print(f"    👤 by {pr['user']['login']}")
-            print(f"    🔗 {pr['html_url']}")
-            print(f"    📊 +{pr.get('additions', 0)} -{pr.get('deletions', 0)} files: {pr.get('changed_files', 0)}")
-            print(f"    📅 Created: {created_str} | Updated: {updated_str}")
-            if pr.get('labels'):
-                labels = [f"🏷️{label['name']}" for label in pr['labels'][:3]]
-                print(f"    🏷️  {' '.join(labels)}")
+            try:
+                created = datetime.fromisoformat(pr['created_at'].replace('Z', '+00:00'))
+                updated = datetime.fromisoformat(pr['updated_at'].replace('Z', '+00:00'))
+                created_str = created.strftime('%Y-%m-%d')
+                updated_str = updated.strftime('%Y-%m-%d')
+                
+                status_icon = "🟢" if pr['state'] == 'open' else "🔴"
+                draft_marker = "📝" if pr.get('draft', False) else ""
+                
+                print(f"{i:2d}. {status_icon} #{pr['number']} {draft_marker}")
+                print(f"    📋 {pr['title']}")
+                print(f"    👤 by {pr['user']['login']}")
+                print(f"    🔗 {pr['html_url']}")
+                print(f"    📊 +{pr.get('additions', 0)} -{pr.get('deletions', 0)} files: {pr.get('changed_files', 0)}")
+                print(f"    📅 Created: {created_str} | Updated: {updated_str}")
+                if pr.get('labels'):
+                    labels = [f"🏷️{label['name']}" for label in pr['labels'][:3]]
+                    print(f"    🏷️  {' '.join(labels)}")
+                print()
+            except Exception as e:
+                print(f"{i:2d}. ❌ Error displaying PR: {e}")
+                print()
+
+    def show_create_pr_instructions(self, owner, repo):
+        """Show instructions for creating a PR"""
+        print(f"\n📝 How to create a Pull Request in {owner}/{repo}:")
+        print("="*60)
+        print("🚀 QUICK METHOD (GitHub Web Interface):")
+        print(f"1. Go to: https://github.com/{owner}/{repo}")
+        print("2. Click on any file (like README.md) or create new file")
+        print("3. Click the pencil icon (✏️) to edit")
+        print("4. Make some changes")
+        print("5. Scroll down → Select 'Create a new branch'")
+        print("6. Click 'Propose changes' → 'Create pull request'")
+        print()
+        print("💻 COMMAND LINE METHOD:")
+        print("1. Clone your repository:")
+        print(f"   git clone https://github.com/{owner}/{repo}.git")
+        print(f"   cd {repo}")
+        print()
+        print("2. Create a new branch:")
+        print("   git checkout -b feature/test-pr")
+        print()
+        print("3. Make some changes:")
+        print("   echo '# Test Change for PR Review' >> README.md")
+        print()
+        print("4. Commit and push:")
+        print("   git add .")
+        print("   git commit -m 'Test: Add changes for PR review'")
+        print("   git push origin feature/test-pr")
+        print()
+        print("5. Create PR:")
+        print(f"   🔗 Go to: https://github.com/{owner}/{repo}/compare")
+        print()
+        print("🌟 TIP: The web interface method is much faster!")
+
+    def suggest_public_repos(self):
+        """Suggest popular public repositories with active PRs"""
+        print("\n🌟 Popular repositories with active PRs:")
+        print("="*50)
+        
+        suggestions = [
+            ("microsoft", "vscode", "Popular code editor"),
+            ("facebook", "react", "JavaScript library"),
+            ("django", "django", "Python web framework"),
+            ("nodejs", "node", "JavaScript runtime"),
+            ("vercel", "next.js", "React framework"),
+            ("vuejs", "vue", "Progressive framework"),
+            ("golang", "go", "Go programming language"),
+            ("microsoft", "TypeScript", "TypeScript language"),
+            ("angular", "angular", "Web application framework"),
+            ("kubernetes", "kubernetes", "Container orchestration")
+        ]
+        
+        for i, (owner, repo, desc) in enumerate(suggestions, 1):
+            print(f"{i:2d}. {owner}/{repo}")
+            print(f"    📝 {desc}")
+            print(f"    🔗 https://github.com/{owner}/{repo}/pulls")
             print()
+        
+        print("Commands:")
+        print("  • Enter number (1-10) to review that repository")
+        print("  • 'custom owner/repo' to specify different repository")
+        print("  • 'back' to return to your repositories")
+        
+        while True:
+            choice = input("\n🌟 Select public repository: ").strip()
+            
+            if choice.lower() == 'back':
+                return "back"
+            
+            if choice.lower().startswith('custom '):
+                repo_path = choice[7:].strip()
+                if '/' in repo_path:
+                    owner, repo = repo_path.split('/', 1)
+                    return owner, repo
+                else:
+                    print("❌ Please use format: custom owner/repo")
+                    continue
+            
+            try:
+                suggestion_index = int(choice) - 1
+                if 0 <= suggestion_index < len(suggestions):
+                    owner, repo, _ = suggestions[suggestion_index]
+                    return owner, repo
+                else:
+                    print("❌ Invalid number")
+            except ValueError:
+                print("❌ Please enter a valid number or command")
 
     async def interactive_repository_selection(self):
         """Interactive repository selection"""
@@ -138,25 +222,9 @@ class InteractivePRReviewer:
         try:
             repos = self.get_user_repositories()
             
-            print(f"📊 Debug: Found {len(repos) if repos else 0} repositories")
-            
             if not repos:
                 print("📭 No repositories found.")
-                # Let's also try to get more info about the API response
-                print("🔍 Checking API access...")
-                url = f"{self.base_url}/user"
-                response = requests.get(url, headers=self.headers)
-                if response.status_code == 200:
-                    user_info = response.json()
-                    print(f"✅ API access OK. User: {user_info.get('login', 'Unknown')}")
-                    print(f"📊 You have {user_info.get('public_repos', 0)} public repos")
-                else:
-                    print(f"❌ API access failed: {response.status_code}")
                 return None, None
-            
-            # Debug: print first repo structure
-            if repos:
-                print(f"🔍 Debug: First repo keys: {list(repos[0].keys())}")
             
             self.display_repositories(repos)
             
@@ -172,13 +240,7 @@ class InteractivePRReviewer:
                 if choice.lower() == 'q':
                     return None, None
                 
-                if choice.lower() == 'n':
-                    # Load next page (implement pagination if needed)
-                    print("📄 Loading more repositories...")
-                    continue
-                
                 if choice.lower().startswith('search '):
-                    # Direct repo search
                     repo_path = choice[7:].strip()
                     if '/' in repo_path:
                         owner, repo = repo_path.split('/', 1)
@@ -197,7 +259,7 @@ class InteractivePRReviewer:
                         if owner and name:
                             return owner, name
                         else:
-                            print(f"❌ Could not get owner/name from repo: {selected_repo}")
+                            print(f"❌ Could not get owner/name from repo")
                             continue
                     else:
                         print("❌ Invalid repository number")
@@ -206,10 +268,6 @@ class InteractivePRReviewer:
                     
         except Exception as e:
             print(f"❌ Error fetching repositories: {e}")
-            print(f"🔍 Debug: Exception type: {type(e)}")
-            import traceback
-            print("📋 Full traceback:")
-            traceback.print_exc()
             return None, None
 
     async def interactive_pr_selection(self, owner, repo):
@@ -217,15 +275,40 @@ class InteractivePRReviewer:
         print(f"\n🔍 Fetching PRs for {owner}/{repo}...")
         
         try:
-            # Get both open and recently closed PRs
             open_prs = self.get_repository_prs(owner, repo, state="open")
             closed_prs = self.get_repository_prs(owner, repo, state="closed", per_page=10)
             
-            all_prs = open_prs + closed_prs[:5]  # Show 5 recent closed PRs
+            all_prs = open_prs + closed_prs[:5]
             
             if not all_prs:
-                print("📭 No pull requests found.")
-                return None
+                print("📭 No pull requests found in this repository.")
+                print("\n💡 Options:")
+                print("  1. Create a test PR in this repository")
+                print("  2. Try a different repository") 
+                print("  3. Review a public repository")
+                print("  4. Back to repository selection")
+                print("  5. Quit")
+                
+                while True:
+                    choice = input("\nWhat would you like to do? (1-5): ").strip()
+                    
+                    if choice == '1':
+                        self.show_create_pr_instructions(owner, repo)
+                        input("\nPress Enter when you've created a PR...")
+                        return "back"
+                    elif choice == '2' or choice == '4':
+                        return "back"
+                    elif choice == '3':
+                        result = self.suggest_public_repos()
+                        if result == "back":
+                            return "back"
+                        else:
+                            # result is (owner, repo) tuple
+                            return result
+                    elif choice == '5':
+                        return None
+                    else:
+                        print("❌ Please enter a number between 1-5")
             
             self.display_pull_requests(all_prs, owner, repo)
             
@@ -274,14 +357,10 @@ class InteractivePRReviewer:
         print(f"\n🔍 Starting review for PR #{pr_number}")
         print(f"📍 Repository: {repo_url}")
         print(f"🔗 PR URL: {pr_url}")
-        print(f"📊 Analyzing PR in {owner}/{repo}...")
         
         try:
-            # Analyze the PR
-            print("📊 Analyzing PR...")
             result = await self.reviewer.analyze_pr(owner, repo, pr_number)
             
-            # Display results (simplified for interactive mode)
             print("\n" + "="*80)
             print("📋 PR REVIEW SUMMARY")
             print("="*80)
@@ -292,16 +371,29 @@ class InteractivePRReviewer:
             print(f"📁 Files changed: {len(result['file_reviews'])}")
             print(f"📄 Summary: {result['summary']}")
             
-            # Ask what to do next
-            print("\nOptions:")
+            # Show code quality metrics
+            print(f"\n🎯 CODE QUALITY ANALYSIS:")
+            for review in result['file_reviews']:
+                file_name = review['file']
+                language = review.get('language', 'Unknown')
+                changes = review['changes']
+                print(f"  📁 {file_name} ({language})")
+                print(f"     📊 Changes: +{changes['additions']} -{changes['deletions']}")
+                if 'improvements' in review and review['improvements']:
+                    print(f"     🔧 Has specific code improvements")
+                print()
+            
+            print("Options:")
             print("  1. See detailed review")
-            print("  2. Post review to GitHub")
-            print("  3. Save review to file")
-            print("  4. Back to PR selection")
-            print("  5. Back to repository selection")
+            print("  2. See code improvements & suggestions")
+            print("  3. See both review & improvements")
+            print("  4. Post review to GitHub")
+            print("  5. Save complete analysis to file")
+            print("  6. Back to PR selection")
+            print("  7. Back to repository selection")
             
             while True:
-                choice = input("\nWhat would you like to do? (1-5): ").strip()
+                choice = input("\nWhat would you like to do? (1-7): ").strip()
                 
                 if choice == '1':
                     print("\n" + "="*80)
@@ -310,6 +402,34 @@ class InteractivePRReviewer:
                     print(result['overall_review'])
                     
                 elif choice == '2':
+                    print("\n" + "="*80)
+                    print("🔧 CODE IMPROVEMENTS & SUGGESTIONS")
+                    print("="*80)
+                    for review in result['file_reviews']:
+                        print(f"\n📁 {review['file']} ({review.get('language', 'Unknown')})")
+                        print("="*60)
+                        if 'improvements' in review and review['improvements']:
+                            print(review['improvements'])
+                        else:
+                            print("No specific code improvements generated for this file.")
+                        print()
+                    
+                elif choice == '3':
+                    print("\n" + "="*80)
+                    print("📋 COMPLETE ANALYSIS")
+                    print("="*80)
+                    print("🔎 DETAILED REVIEW:")
+                    print("-" * 40)
+                    print(result['overall_review'])
+                    print("\n🔧 CODE IMPROVEMENTS:")
+                    print("-" * 40)
+                    for review in result['file_reviews']:
+                        print(f"\n📁 {review['file']} ({review.get('language', 'Unknown')})")
+                        if 'improvements' in review and review['improvements']:
+                            print(review['improvements'])
+                        print()
+                    
+                elif choice == '4':
                     confirm = input(f"Post review to {pr_url}? (y/N): ").lower().strip()
                     if confirm == 'y':
                         print("📤 Posting review to GitHub...")
@@ -319,30 +439,45 @@ class InteractivePRReviewer:
                             "COMMENT"
                         )
                         print("✅ Review posted successfully!")
-                        print(f"🔗 View review: {review_response.get('html_url', pr_url)}")
                         
-                elif choice == '3':
+                elif choice == '5':
                     filename = f"review_{owner}_{repo}_PR_{pr_number}.md"
                     with open(filename, 'w') as f:
-                        f.write(f"# PR Review: {result['pr_details'].get('title', 'N/A')}\n\n")
+                        f.write(f"# Complete PR Analysis: {result['pr_details'].get('title', 'N/A')}\n\n")
                         f.write(f"**Repository:** {owner}/{repo}\n")
-                        f.write(f"**PR URL:** {pr_url}\n\n")
-                        f.write(f"## Summary\n{result['summary']}\n\n")
-                        f.write(f"## Detailed Review\n{result['overall_review']}\n")
-                    print(f"💾 Review saved to {filename}")
+                        f.write(f"**PR URL:** {pr_url}\n")
+                        f.write(f"**Author:** {result['pr_details'].get('user', {}).get('login', 'N/A')}\n\n")
+                        
+                        f.write(f"## Executive Summary\n{result['summary']}\n\n")
+                        f.write(f"## Detailed Review\n{result['overall_review']}\n\n")
+                        
+                        f.write("## Code Improvements by File\n\n")
+                        for review in result['file_reviews']:
+                            f.write(f"### {review['file']} ({review.get('language', 'Unknown')})\n\n")
+                            if 'improvements' in review and review['improvements']:
+                                f.write(review['improvements'])
+                                f.write("\n\n")
+                        
+                        f.write("## Technical Analysis\n\n")
+                        for review in result['file_reviews']:
+                            f.write(f"### {review['file']}\n")
+                            f.write(f"**Changes:** +{review['changes']['additions']} -{review['changes']['deletions']}\n\n")
+                            f.write(review['analysis'])
+                            f.write("\n\n")
                     
-                elif choice == '4':
+                    print(f"💾 Complete analysis saved to {filename}")
+                    
+                elif choice == '6':
                     return "back_to_pr"
                     
-                elif choice == '5':
+                elif choice == '7':
                     return "back_to_repo"
                     
                 else:
-                    print("❌ Please enter a number between 1-5")
+                    print("❌ Please enter a number between 1-7")
                     
         except Exception as e:
             print(f"❌ Error during review: {str(e)}")
-            print(f"🔗 PR URL for manual review: {pr_url}")
             return "error"
 
     async def run_interactive_mode(self):
@@ -350,7 +485,6 @@ class InteractivePRReviewer:
         print("🚀 Welcome to Interactive GitHub PR Reviewer!")
         print("="*50)
         
-        # Validate configuration first
         try:
             config = GitHubConfig()
             config.validate()
@@ -361,19 +495,28 @@ class InteractivePRReviewer:
         
         while True:
             # Select repository
-            owner, repo = await self.interactive_repository_selection()
-            if owner is None:
+            selection = await self.interactive_repository_selection()
+            if selection[0] is None:
                 print("👋 Goodbye!")
                 break
                 
+            owner, repo = selection
+                
             while True:
                 # Select PR
-                pr_number = await self.interactive_pr_selection(owner, repo)
-                if pr_number is None:
+                pr_result = await self.interactive_pr_selection(owner, repo)
+                if pr_result is None:
                     print("👋 Goodbye!")
                     return
-                elif pr_number == "back":
+                elif pr_result == "back":
                     break  # Back to repository selection
+                elif isinstance(pr_result, tuple):
+                    # It's a new (owner, repo) from public repos
+                    owner, repo = pr_result
+                    continue
+                
+                # pr_result is a PR number
+                pr_number = pr_result
                 
                 # Review PR
                 result = await self.review_selected_pr(owner, repo, pr_number)
@@ -381,7 +524,6 @@ class InteractivePRReviewer:
                     break  # Back to repository selection
                 elif result == "back_to_pr":
                     continue  # Back to PR selection
-                # Continue with current repository for other results
 
 def main():
     """Main function"""
@@ -389,4 +531,4 @@ def main():
     asyncio.run(reviewer.run_interactive_mode())
 
 if __name__ == "__main__":
-    main()   
+    main()
